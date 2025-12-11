@@ -7,7 +7,6 @@ import org.pl.service.SessionItemsCountsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.result.view.Rendering;
@@ -80,7 +79,7 @@ public class ItemController {
                 });
     }
 
-    @PostMapping(value = itemsAction, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @PostMapping(value = itemsAction)
     public Mono<String> increaseDecreaseItemsCount(ServerWebExchange exchange) {
         return exchange.getFormData()
                 .flatMap(formData -> {
@@ -188,7 +187,7 @@ public class ItemController {
                 });
     }
 
-    @PostMapping(value = itemsAction + "/{id}", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @PostMapping(value = itemsAction + "/{id}")
     public Mono<String> increaseDecreaseItemCount(
             @PathVariable Long id,
             ServerWebExchange exchange) {

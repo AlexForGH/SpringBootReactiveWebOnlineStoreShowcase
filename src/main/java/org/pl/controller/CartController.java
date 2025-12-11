@@ -2,9 +2,11 @@ package org.pl.controller;
 
 import org.pl.service.CartService;
 import org.pl.service.SessionItemsCountsService;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.reactive.result.view.Rendering;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -55,10 +57,8 @@ public class CartController {
                 });
     }
 
-    @PostMapping(value = cartAction, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public Mono<String> increaseDecreaseItemsCount(
-            ServerWebExchange exchange
-    ) {
+    @PostMapping(value = cartAction)
+    public Mono<String> increaseDecreaseItemsCount(ServerWebExchange exchange) {
         return exchange.getFormData()
                 .flatMap(formData -> {
                     String idStr = formData.getFirst("id");
@@ -72,10 +72,8 @@ public class CartController {
                 });
     }
 
-    @PostMapping(value = buyAction, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public Mono<String> buyItems(
-            ServerWebExchange exchange
-    ) {
+    @PostMapping(value = buyAction)
+    public Mono<String> buyItems(ServerWebExchange exchange) {
         return cartService.createSaveOrders(exchange)
                 .flatMap(savedOrder -> {
                     exchange.getAttributes().put("toastMessage", "Заказ №" + savedOrder.getOrderNumber() + " успешно оформлен!");
@@ -89,7 +87,7 @@ public class CartController {
                 });
     }
 
-    @PostMapping(value = buyAction + "/{id}", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @PostMapping(value = buyAction + "/{id}")
     public Mono<String> buyItem(
             @PathVariable Long id,
             ServerWebExchange exchange
