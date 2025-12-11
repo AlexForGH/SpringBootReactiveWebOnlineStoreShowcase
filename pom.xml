@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>org.pl</groupId>
-    <artifactId>SpringBootWebOnlineStoreShowcase</artifactId>
+    <artifactId>SpringBootReactiveWebOnlineStoreShowcase</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>SpringBootWebOnlineStoreShowcase</name>
+    <name>SpringBootReactiveWebOnlineStoreShowcase</name>
 
     <properties>
         <java.version>23</java.version>
