@@ -1,13 +1,13 @@
 package org.pl.controller;
 
-import jakarta.servlet.http.HttpSession;
-import org.pl.dao.Order;
 import org.pl.service.CartService;
 import org.pl.service.SessionItemsCountsService;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.reactive.result.view.Rendering;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
 import static org.pl.controller.Actions.*;
 
@@ -27,88 +27,83 @@ public class CartController {
     }
 
     @GetMapping(cartAction)
-    public String cartAction(
-            Model model,
-            HttpSession httpSession
-    ) {
-        sessionItemsCountsService.getCartItems(httpSession)
-                .entrySet()
-                .removeIf(entry -> entry.getValue() == 0);
-        model.addAttribute("cartItems", sessionItemsCountsService.getCartItems(httpSession));
-        model.addAttribute("items", cartService.getItemsByItemsCounts(httpSession));
-        model.addAttribute("cartAction", cartAction);
-        model.addAttribute("itemsAction", itemsAction);
-        model.addAttribute("buyAction", buyAction);
-        model.addAttribute("totalItemsSum", cartService.getTotalItemsSum(httpSession));
-        return "cart";
+    public Mono<Rendering> cartAction(ServerWebExchange exchange) {
+        return Mono.zip(
+                        sessionItemsCountsService
+                                .getCartItems(exchange)
+                                .doOnNext(
+                                        items -> items.entrySet().removeIf(
+                                                entry -> entry.getValue() == 0
+                                        )
+                                ),
+                        cartService.getItemsByItemsCounts(exchange),
+                        cartService.getTotalItemsSum(exchange)
+                )
+                .map(tuple -> {
+                    var cartItems = tuple.getT1();
+                    var items = tuple.getT2();
+                    var totalItemsSum = tuple.getT3();
+
+                    return Rendering.view("cart")
+                            .modelAttribute("cartItems", cartItems)
+                            .modelAttribute("items", items)
+                            .modelAttribute("cartAction", cartAction)
+                            .modelAttribute("itemsAction", itemsAction)
+                            .modelAttribute("buyAction", buyAction)
+                            .modelAttribute("totalItemsSum", totalItemsSum)
+                            .build();
+                });
     }
 
-    @PostMapping(cartAction)
-    public String increaseDecreaseItemsCount(
-            @RequestParam Long id,
-            @RequestParam String action,
-            RedirectAttributes redirectAttributes,
-            HttpSession httpSession
+    @PostMapping(value = cartAction, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Mono<String> increaseDecreaseItemsCount(
+            ServerWebExchange exchange
     ) {
-        sessionItemsCountsService.updateItemCount(httpSession, id, action);
-        redirectAttributes.addFlashAttribute(
-                "cartItems",
-                sessionItemsCountsService.getCartItems(httpSession)
-        );
-        return "redirect:" + cartAction;
+        return exchange.getFormData()
+                .flatMap(formData -> {
+                    String idStr = formData.getFirst("id");
+                    if (idStr == null || idStr.trim().isEmpty()) {
+                        return Mono.error(new IllegalArgumentException("id is required"));
+                    }
+                    Long id = Long.parseLong(idStr.trim());
+                    String action = formData.getFirst("action");
+                    return sessionItemsCountsService.updateItemCount(exchange, id, action)
+                            .thenReturn("redirect:" + cartAction);
+                });
     }
 
-    @PostMapping(buyAction)
-    public String buyItems(
-            RedirectAttributes redirectAttributes,
-            HttpSession httpSession
+    @PostMapping(value = buyAction, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Mono<String> buyItems(
+            ServerWebExchange exchange
     ) {
-        Long orderId = 0L;
-        try {
-            Order savedOrder = cartService.createSaveOrders(httpSession);
-            orderId = savedOrder.getId();
-            addFlashAttributeForBuyItems(redirectAttributes, savedOrder.getOrderNumber(), null);
-        } catch (Exception e) {
-            addFlashAttributeForBuyItems(redirectAttributes, null, e);
-        }
-
-        return "redirect:" + ordersAction + "/" + orderId;
+        return cartService.createSaveOrders(exchange)
+                .flatMap(savedOrder -> {
+                    exchange.getAttributes().put("toastMessage", "Заказ №" + savedOrder.getOrderNumber() + " успешно оформлен!");
+                    exchange.getAttributes().put("toastType", "success");
+                    return Mono.just("redirect:" + ordersAction + "/" + savedOrder.getId());
+                })
+                .onErrorResume(e -> {
+                    exchange.getAttributes().put("toastMessage", "Ошибка при оформлении заказа: " + e.getMessage());
+                    exchange.getAttributes().put("toastType", "error");
+                    return Mono.just("redirect:" + ordersAction + "/0");
+                });
     }
 
-    @PostMapping(buyAction + "/{id}")
-    public String buyItem(
-            RedirectAttributes redirectAttributes,
+    @PostMapping(value = buyAction + "/{id}", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Mono<String> buyItem(
             @PathVariable Long id,
-            HttpSession httpSession
+            ServerWebExchange exchange
     ) {
-        Long orderId = 0L;
-        try {
-            Order savedOrder = cartService.createSaveOrder(id, httpSession);
-            orderId = savedOrder.getId();
-            addFlashAttributeForBuyItems(redirectAttributes, savedOrder.getOrderNumber(), null);
-        } catch (Exception e) {
-            addFlashAttributeForBuyItems(redirectAttributes, null, e);
-        }
-        return "redirect:" + ordersAction + "/" + orderId;
-    }
-
-    private void addFlashAttributeForBuyItems(
-            RedirectAttributes redirectAttributes,
-            String orderNumber,
-            Exception e
-    ) {
-        if (e == null) {
-            redirectAttributes.addFlashAttribute(
-                    "toastMessage",
-                    "Заказ №" + orderNumber + " успешно оформлен!"
-            );
-            redirectAttributes.addFlashAttribute("toastType", "success");
-        } else {
-            redirectAttributes.addFlashAttribute(
-                    "toastMessage",
-                    "Ошибка при оформлении заказа: " + e.getMessage()
-            );
-            redirectAttributes.addFlashAttribute("toastType", "error");
-        }
+        return cartService.createSaveOrder(id, exchange)
+                .flatMap(savedOrder -> {
+                    exchange.getAttributes().put("toastMessage", "Заказ №" + savedOrder.getOrderNumber() + " успешно оформлен!");
+                    exchange.getAttributes().put("toastType", "success");
+                    return Mono.just("redirect:" + ordersAction + "/" + savedOrder.getId());
+                })
+                .onErrorResume(e -> {
+                    exchange.getAttributes().put("toastMessage", "Ошибка при оформлении заказа: " + e.getMessage());
+                    exchange.getAttributes().put("toastType", "error");
+                    return Mono.just("redirect:" + ordersAction + "/0");
+                });
     }
 }
