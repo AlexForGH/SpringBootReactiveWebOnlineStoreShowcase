@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.reactive.result.view.Rendering;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import static org.pl.controller.Actions.itemsAction;
@@ -32,17 +33,29 @@ public class OrderController {
     }
 
     @GetMapping(ordersAction + "/{id}")
-    public Mono<Rendering> getOrderById(@PathVariable Long id) {
-        return orderItemService.getOrderWithItems(id)
-                .map(orderWithItems -> Rendering.view("order")
-                        .modelAttribute("orderWithItems", orderWithItems)
-                        .modelAttribute("itemsAction", itemsAction)
-                        .modelAttribute("ordersAction", ordersAction)
-                        .build())
-                .onErrorResume(e -> Mono.just(Rendering.view("order")
-                        .modelAttribute("error", "Заказ не найден")
-                        .modelAttribute("itemsAction", itemsAction)
-                        .modelAttribute("ordersAction", ordersAction)
-                        .build()));
+    public Mono<Rendering> getOrderById(
+            @PathVariable Long id,
+            ServerWebExchange exchange) {
+
+        return exchange.getSession()
+                .flatMap(session -> {
+                    // Получаем toast из сессии
+                    String toastMessage = (String) session.getAttributes().get("toastMessage");
+                    String toastType = (String) session.getAttributes().get("toastType");
+
+                    // Удаляем из сессии после получения
+                    session.getAttributes().remove("toastMessage");
+                    session.getAttributes().remove("toastType");
+
+                    return orderItemService.getOrderWithItems(id)
+                            .map(orderWithItems -> Rendering.view("order")
+                                    .modelAttribute("orderWithItems", orderWithItems)
+                                    .modelAttribute("ordersAction", ordersAction)
+                                    .modelAttribute("itemsAction", itemsAction)
+                                    .modelAttribute("toastMessage", toastMessage)
+                                    .modelAttribute("toastType", toastType)
+                                    .build());
+                })
+                .switchIfEmpty(Mono.error(new RuntimeException("Order not found")));
     }
 }

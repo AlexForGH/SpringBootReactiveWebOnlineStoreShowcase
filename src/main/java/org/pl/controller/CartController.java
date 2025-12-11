@@ -74,16 +74,21 @@ public class CartController {
 
     @PostMapping(value = buyAction)
     public Mono<String> buyItems(ServerWebExchange exchange) {
-        return cartService.createSaveOrders(exchange)
-                .flatMap(savedOrder -> {
-                    exchange.getAttributes().put("toastMessage", "Заказ №" + savedOrder.getOrderNumber() + " успешно оформлен!");
-                    exchange.getAttributes().put("toastType", "success");
-                    return Mono.just("redirect:" + ordersAction + "/" + savedOrder.getId());
-                })
-                .onErrorResume(e -> {
-                    exchange.getAttributes().put("toastMessage", "Ошибка при оформлении заказа: " + e.getMessage());
-                    exchange.getAttributes().put("toastType", "error");
-                    return Mono.just("redirect:" + ordersAction + "/0");
+        return exchange.getSession()
+                .flatMap(session -> {
+                    return cartService.createSaveOrders(exchange)
+                            .flatMap(savedOrder -> {
+                                session.getAttributes().put("toastMessage",
+                                        "Заказ №" + savedOrder.getOrderNumber() + " успешно оформлен!");
+                                session.getAttributes().put("toastType", "success");
+                                return Mono.just("redirect:" + ordersAction + "/" + savedOrder.getId());
+                            })
+                            .onErrorResume(e -> {
+                                session.getAttributes().put("toastMessage",
+                                        "Ошибка при оформлении заказа: " + e.getMessage());
+                                session.getAttributes().put("toastType", "error");
+                                return Mono.just("redirect:" + ordersAction + "/0");
+                            });
                 });
     }
 
@@ -92,16 +97,19 @@ public class CartController {
             @PathVariable Long id,
             ServerWebExchange exchange
     ) {
-        return cartService.createSaveOrder(id, exchange)
-                .flatMap(savedOrder -> {
-                    exchange.getAttributes().put("toastMessage", "Заказ №" + savedOrder.getOrderNumber() + " успешно оформлен!");
-                    exchange.getAttributes().put("toastType", "success");
-                    return Mono.just("redirect:" + ordersAction + "/" + savedOrder.getId());
-                })
-                .onErrorResume(e -> {
-                    exchange.getAttributes().put("toastMessage", "Ошибка при оформлении заказа: " + e.getMessage());
-                    exchange.getAttributes().put("toastType", "error");
-                    return Mono.just("redirect:" + ordersAction + "/0");
+        return exchange.getSession()
+                .flatMap(session -> {
+                    return cartService.createSaveOrder(id, exchange)
+                            .flatMap(savedOrder -> {
+                                session.getAttributes().put("toastMessage", "Заказ №" + savedOrder.getOrderNumber() + " успешно оформлен!");
+                                session.getAttributes().put("toastType", "success");
+                                return Mono.just("redirect:" + ordersAction + "/" + savedOrder.getId());
+                            })
+                            .onErrorResume(e -> {
+                                session.getAttributes().put("toastMessage", "Ошибка при оформлении заказа: " + e.getMessage());
+                                session.getAttributes().put("toastType", "error");
+                                return Mono.just("redirect:" + ordersAction + "/0");
+                            });
                 });
     }
 }
