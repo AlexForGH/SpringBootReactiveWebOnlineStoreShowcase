@@ -1,16 +1,16 @@
 package org.pl.service;
 
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.servlet.http.HttpSession;
 import org.pl.dao.Item;
 import org.pl.dao.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class CartService {
@@ -33,51 +33,60 @@ public class CartService {
     }
 
     @Transactional(
-            rollbackFor = {EntityNotFoundException.class, RuntimeException.class}
+            rollbackFor = {RuntimeException.class}
     )
-    public Order createSaveOrders(HttpSession httpSession) {
-        Order savedOrder = orderService.createOrder(getTotalItemsSum(httpSession));
-        orderItemService.saveOrder(savedOrder, sessionItemsCountsService.getCartItems(httpSession));
-        sessionItemsCountsService.clearCartItems(httpSession);
-        return savedOrder;
+    public Mono<Order> createSaveOrders(ServerWebExchange exchange) {
+        return getTotalItemsSum(exchange)
+                .flatMap(totalAmount -> orderService.createOrder(totalAmount))
+                .flatMap(savedOrder -> {
+                    return sessionItemsCountsService.getCartItems(exchange)
+                            .flatMap(cartItems -> orderItemService.saveOrder(savedOrder, cartItems)
+                                    .then(sessionItemsCountsService.clearCartItems(exchange))
+                                    .thenReturn(savedOrder));
+                });
     }
 
     @Transactional(
-            rollbackFor = {EntityNotFoundException.class, RuntimeException.class}
+            rollbackFor = {RuntimeException.class}
     )
-    public Order createSaveOrder(Long itemId, HttpSession httpSession) {
-        Order savedOrder = orderService.createOrder(
-                itemService.getPriceById(itemId).multiply(
-                        BigDecimal.valueOf(
-                                sessionItemsCountsService.getCartItems(httpSession).get(itemId)
-                        )
-                )
-        );
-        orderItemService.saveOrder(
-                savedOrder,
-                sessionItemsCountsService.getCartItems(httpSession).entrySet().stream()
-                        .filter(entry -> entry.getKey().equals(itemId))
-                        .collect(
-                                Collectors.toMap(
-                                        Map.Entry::getKey,
-                                        Map.Entry::getValue
-                                )
-                        )
-        );
-        sessionItemsCountsService.getCartItems(httpSession).remove(itemId);
-        return savedOrder;
+    public Mono<Order> createSaveOrder(Long itemId, ServerWebExchange exchange) {
+        return sessionItemsCountsService.getCartItems(exchange)
+                .flatMap(cartItems -> {
+                    Integer quantity = cartItems.get(itemId);
+                    if (quantity == null || quantity == 0) {
+                        return Mono.error(new RuntimeException("Товар не найден в корзине"));
+                    }
+
+                    return itemService.getPriceById(itemId)
+                            .map(price -> price.multiply(BigDecimal.valueOf(quantity)))
+                            .flatMap(totalAmount -> orderService.createOrder(totalAmount))
+                            .flatMap(savedOrder -> {
+                                Map<Long, Integer> singleItemCart = Map.of(itemId, quantity);
+                                return orderItemService.saveOrder(savedOrder, singleItemCart)
+                                        .then(sessionItemsCountsService.removeItemFromCart(exchange, itemId))
+                                        .thenReturn(savedOrder);
+                            });
+                });
     }
 
     @Transactional(readOnly = true)
-    public List<Item> getItemsByItemsCounts(HttpSession httpSession) {
-        return sessionItemsCountsService.getCartItems(httpSession).keySet().stream()
-                .map(id -> itemService.getItemById(id).orElseThrow()).toList();
+    public Mono<List<Item>> getItemsByItemsCounts(ServerWebExchange exchange) {
+        return sessionItemsCountsService.getCartItems(exchange)
+                .flatMapMany(cartItems -> Flux.fromIterable(cartItems.keySet()))
+                .flatMap(itemService::getItemById)
+                .collectList();
     }
 
     @Transactional(readOnly = true)
-    public BigDecimal getTotalItemsSum(HttpSession httpSession) {
-        return sessionItemsCountsService.getCartItems(httpSession).entrySet().stream()
-                .map(entry -> itemService.getPriceById(entry.getKey()).multiply(BigDecimal.valueOf(entry.getValue())))
+    public Mono<BigDecimal> getTotalItemsSum(ServerWebExchange exchange) {
+        return sessionItemsCountsService.getCartItems(exchange)
+                .flatMapMany(cartItems -> Flux.fromIterable(cartItems.entrySet()))
+                .flatMap(entry -> {
+                    Long itemId = entry.getKey();
+                    Integer quantity = entry.getValue();
+                    return itemService.getPriceById(itemId)
+                            .map(price -> price.multiply(BigDecimal.valueOf(quantity)));
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
