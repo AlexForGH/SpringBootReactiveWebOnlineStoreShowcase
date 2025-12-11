@@ -1,10 +1,11 @@
 package org.pl.repository;
 
 import org.pl.dao.Order;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.r2dbc.repository.Query;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import reactor.core.publisher.Mono;
 
-public interface OrderRepository extends JpaRepository<Order, Long> {
-    @Query("SELECT o.orderNumber FROM Order o ORDER BY o.orderDate DESC LIMIT 1")
-    String findLastOrderNumber();
+public interface OrderRepository extends ReactiveCrudRepository<Order, Long> {
+    @Query("SELECT order_number FROM orders ORDER BY order_date DESC LIMIT 1")
+    Mono<String> findLastOrderNumber();
 }

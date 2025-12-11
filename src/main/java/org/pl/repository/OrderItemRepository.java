@@ -1,16 +1,14 @@
 package org.pl.repository;
 
 import org.pl.dao.OrderItem;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.r2dbc.repository.Query;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import reactor.core.publisher.Flux;
 
-import java.util.List;
+public interface OrderItemRepository extends ReactiveCrudRepository<OrderItem, Long> {
+    @Query("SELECT * FROM order_items")
+    Flux<OrderItem> findAllWithAssociations();
 
-public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
-    @Query("SELECT oi FROM OrderItem oi JOIN FETCH oi.order JOIN FETCH oi.item")
-    List<OrderItem> findAllWithAssociations();
-
-    @Query("SELECT oi FROM OrderItem oi JOIN FETCH oi.order JOIN FETCH oi.item WHERE oi.order.id = :orderId")
-    List<OrderItem> findByOrderIdWithAssociations(@Param("orderId") Long orderId);
+    @Query("SELECT * FROM order_items WHERE order_id = :orderId")
+    Flux<OrderItem> findByOrderIdWithAssociations(Long orderId);
 }
