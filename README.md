@@ -21,7 +21,7 @@ Technology stack: Spring Framework, Spring Boot, H2DB, HTML, Thymeleaf, Spring W
             - clone the repository
             - open the project in the IDE
             - check the target directory for the presence of the file:
-              SpringBootWebOnlineStoreShowcase‑0.0.1‑SNAPSHOT.jar
+              SpringBootReactiveWebOnlineStoreShowcase‑0.0.1‑SNAPSHOT.jar
             - right‑click on the Dockerfile and select “Run Dockerfile”
             - go to the browser at http://localhost:8080/
             - the application's start page will open
@@ -30,7 +30,7 @@ Technology stack: Spring Framework, Spring Boot, H2DB, HTML, Thymeleaf, Spring W
             - in the root directory Run the command to build the executable from the project folder.
               Uber-Jar: ./mvnw clean package spring-boot:repackage
             - check the target directory for the presence of the file:
-              SpringBootWebOnlineStoreShowcase‑0.0.1‑SNAPSHOT.jar
+              SpringBootReactiveWebOnlineStoreShowcase‑0.0.1‑SNAPSHOT.jar
             - run the following Docker commands:
                 - docker build -t sb‑web‑store‑app .
                 - docker run -p 8080:8080 sb‑web‑store‑app:latest
@@ -60,7 +60,7 @@ Technology stack: Spring Framework, Spring Boot, H2DB, HTML, Thymeleaf, Spring W
             - клонировать репозиторий
             - открыть проект в IDE
             - проверить в появившейся директории target наличие
-              файла: SpringBootWebOnlineStoreShowcase-0.0.1-SNAPSHOT.jar
+              файла: SpringBootReactiveWebOnlineStoreShowcase-0.0.1-SNAPSHOT.jar
             - нажать ПКМ на Dockerfile и выбрать "Run Dockerfile"
             - зайти в браузер по адресу http://localhost:8080/
             - откроется стартовая страница приложения
@@ -69,7 +69,7 @@ Technology stack: Spring Framework, Spring Boot, H2DB, HTML, Thymeleaf, Spring W
             - в корне папки проекта выполнить команду для сборки исполняемого
               Uber-Jar: ./mvnw clean package spring-boot:repackage
             - проверить в появившейся директории target наличие
-              файла: SpringBootWebOnlineStoreShowcase-0.0.1-SNAPSHOT.jar
+              файла: SpringBootReactiveWebOnlineStoreShowcase-0.0.1-SNAPSHOT.jar
             - выполнить команды докера:
                     - docker build -t sb-web-store-app .
                     - docker run -p 8080:8080 sb-web-store-app:latest
