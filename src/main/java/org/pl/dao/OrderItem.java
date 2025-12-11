@@ -1,33 +1,43 @@
 package org.pl.dao;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
-@Entity
 @Table(name = "order_items")
 public class OrderItem {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    @Column("id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    @Column("order_id")
+    private Long orderId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "item_id", nullable = false)
-    private Item item;
+    @Column("item_id")
+    private Long itemId;
 
-    @Column(nullable = false)
+    @Column("quantity")
     private Integer quantity;
+
+    // Для удобства работы с данными (не сохраняются в БД)
+    private transient Order order;
+    private transient Item item;
 
     public OrderItem() {
     }
 
+    public OrderItem(Long orderId, Long itemId, Integer quantity) {
+        this.orderId = orderId;
+        this.itemId = itemId;
+        this.quantity = quantity;
+    }
+
     public OrderItem(Order order, Item item, Integer quantity) {
+        this.orderId = order != null ? order.getId() : null;
+        this.itemId = item != null ? item.getId() : null;
+        this.quantity = quantity;
         this.order = order;
         this.item = item;
-        this.quantity = quantity;
     }
 
     public Long getId() {
@@ -60,5 +70,21 @@ public class OrderItem {
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
+    }
+
+    public Long getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
+    }
+
+    public Long getItemId() {
+        return itemId;
+    }
+
+    public void setItemId(Long itemId) {
+        this.itemId = itemId;
     }
 }

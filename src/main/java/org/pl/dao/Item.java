@@ -1,23 +1,23 @@
 package org.pl.dao;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
 
-@Entity
 @Table(name = "items")
 public class Item {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    @Column("id")
     private Long id;
-    @Column(name = "title", length = 255, nullable = false)
+    @Column("title")
     private String title;
-    @Column(name = "img_path", length = 500)
+    @Column("img_path")
     private String imgPath;
-    @Column(name = "price", length = 500, nullable = false)
+    @Column("price")
     private BigDecimal price;
-    @Column(name = "description", nullable = false)
+    @Column("description")
     private String description;
 
     public Item() {

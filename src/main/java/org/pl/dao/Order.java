@@ -1,28 +1,23 @@
 package org.pl.dao;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
-@Entity
 @Table(name = "orders")
 public class Order {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    @Column("id")
     private Long id;
-    @Column(name = "order_number", unique = true, nullable = false)
+    @Column("order_number")
     private String orderNumber;
-    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
+    @Column("total_amount")
     private BigDecimal totalAmount;
-    @Column(name = "order_date")
+    @Column("order_date")
     private LocalDateTime orderDate;
-
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> orderItems = new ArrayList<>();
 
     public Order() {
     }
@@ -63,13 +58,5 @@ public class Order {
 
     public void setOrderDate(LocalDateTime orderDate) {
         this.orderDate = orderDate;
-    }
-
-    public List<OrderItem> getOrderItems() {
-        return orderItems;
-    }
-
-    public void setOrderItems(List<OrderItem> orderItems) {
-        this.orderItems = orderItems;
     }
 }
